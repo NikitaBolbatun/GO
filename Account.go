@@ -15,10 +15,13 @@ func NewAccount(Name string) Account {
 
 //
 func (s S) Register(Name string) (int, error) {
+
 	if _, ok := s.Accounts[Name]; ok {
 		return 0, errors.New("username exists")
 	}
-
+	if len(Name) < 1 {
+		return 0, errors.New("username not correct")
+	}
 	account := NewAccount(Name)
 	s.Accounts[Name] = &account
 	return 0, nil

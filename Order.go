@@ -9,11 +9,11 @@ var DiscountType = map[ProductType]map[AccountType]float32{
 	ProductNormal:  {AccountPremium: -50, AccountNormal: 0},
 }
 
-func (s S) CalculateOrder(name string, order Order) float32 {
+func (s S) CalculateOrder(name string, order Order) (float32, error) {
 
 	account, err := s.GetAccount(name)
 	if err != nil {
-		return 0
+		return 0, errors.New("not name register")
 	}
 
 	// products
@@ -28,7 +28,7 @@ func (s S) CalculateOrder(name string, order Order) float32 {
 	for _, bundle := range order.Bundles {
 
 		if bundle.Discount < 1 || bundle.Discount > 99 {
-			return 0
+			return 0, errors.New("size discount error")
 		}
 
 		price := float32(0)
@@ -38,18 +38,26 @@ func (s S) CalculateOrder(name string, order Order) float32 {
 		bundlesPrice += price * (1 - bundle.Discount*0.01)
 	}
 
-	allprice := ProductsMoney + bundlesPrice
-	return allprice
+	allPrice := ProductsMoney + bundlesPrice
+
+	return allPrice, nil
 }
 
-func (s S) PlaceOrder(name string, order Order) error {
+func (s S) PlaceOrder(name string, order Order) (int, error) {
 
-	var price = s.CalculateOrder(name, order)
-	acc, ok := s.Accounts[name]
-	if !ok {
-		return errors.New("not name register")
+	price, err := s.CalculateOrder(name, order)
+	if err != nil {
+		return 0, errors.New("not calculate order")
 	}
 
-	acc.Balance -= price
-	return nil
+	account, ok := s.Accounts[name]
+	if !ok {
+		return 0, errors.New("not name register")
+	}
+
+	if account.Balance < price {
+		return 0, errors.New("insufficient funds")
+	}
+	account.Balance -= price
+	return 0, nil
 }
