@@ -15,6 +15,8 @@ func (s S) AddBundle(name string, product Product, discount float32, additional 
 	if discount < 1 || discount > 99 {
 		return errors.New("bundle not found")
 	}
+	s.bundleMutex.Lock()
+	defer s.bundleMutex.Unlock()
 
 	b := NewBundle(product, discount, additional...)
 	s.Bundles[name] = &b
@@ -27,6 +29,9 @@ func (s S) ChangeDiscount(name string, discount float32) error {
 		return errors.New("not discount")
 	}
 
+	s.bundleMutex.Lock()
+	defer s.bundleMutex.Unlock()
+
 	if _, ok := s.Bundles[name]; !ok {
 		return errors.New("not bundle")
 	}
@@ -36,6 +41,9 @@ func (s S) ChangeDiscount(name string, discount float32) error {
 }
 
 func (s S) RemoveBundle(name string) error {
+
+	s.bundleMutex.Lock()
+	defer s.bundleMutex.Unlock()
 
 	if _, ok := s.Bundles[name]; !ok {
 		return errors.New("not bundle")

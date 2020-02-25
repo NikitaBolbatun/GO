@@ -11,7 +11,9 @@ var DiscountType = map[ProductType]map[AccountType]float32{
 
 func (s S) CalculateOrder(name string, order Order) (float32, error) {
 
+	s.accountMutex.RLock()
 	account, err := s.GetAccount(name)
+	s.accountMutex.RUnlock()
 	if err != nil {
 		return 0, errors.New("not name register")
 	}
@@ -44,8 +46,9 @@ func (s S) CalculateOrder(name string, order Order) (float32, error) {
 }
 
 func (s S) PlaceOrder(name string, order Order) (int, error) {
-
+	s.orderMutex.Lock()
 	price, err := s.CalculateOrder(name, order)
+	s.orderMutex.Unlock()
 	if err != nil {
 		return 0, errors.New("not calculate order")
 	}

@@ -6,9 +6,10 @@ import (
 
 func NewShop() *S {
 	return &S{
-		Products: make(map[string]Product),
-		Bundles:  make(map[string]Bundle),
-		Accounts: make(map[string]Account),
+		// несоответсвтие с определеннымм типами в структуре S
+		Products: make(map[string]*Product),
+		Bundles:  make(map[string]*Bundle),
+		Accounts: make(map[string]*Account),
 	}
 }
 

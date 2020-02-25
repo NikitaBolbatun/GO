@@ -1,5 +1,7 @@
 package shop
 
+import "sync"
+
 const (
 	ProductNormal ProductType = iota
 	ProductPremium
@@ -49,4 +51,9 @@ type S struct {
 	Accounts map[string]*Account
 	Products map[string]*Product
 	Bundles  map[string]*Bundle
+
+	accountMutex sync.RWMutex
+	productMutex sync.RWMutex
+	bundleMutex  sync.RWMutex
+	orderMutex   sync.RWMutex
 }
