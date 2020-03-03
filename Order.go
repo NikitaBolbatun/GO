@@ -18,11 +18,11 @@ func (s S) CalculateOrder(name string, order Order) (float32, error) {
 		return 0, errors.New("not name register")
 	}
 
-	// products
-	ProductsMoney := float32(0)
+	// discount
+	allDiscount := float32(0)
 	for _, product := range order.Products {
 		var discount = DiscountType[product.Type][account.Type]
-		ProductsMoney += product.Price * (1 - discount*0.01)
+		allDiscount += product.Price * (1 - discount*0.01)
 	}
 
 	// bundles
@@ -40,27 +40,27 @@ func (s S) CalculateOrder(name string, order Order) (float32, error) {
 		bundlesPrice += price * (1 - bundle.Discount*0.01)
 	}
 
-	allPrice := ProductsMoney + bundlesPrice
+	allPrice := allDiscount + bundlesPrice
 
 	return allPrice, nil
 }
 
-func (s S) PlaceOrder(name string, order Order) (int, error) {
+func (s S) PlaceOrder(name string, order Order) (error, error) {
 	s.orderMutex.Lock()
 	price, err := s.CalculateOrder(name, order)
 	s.orderMutex.Unlock()
 	if err != nil {
-		return 0, errors.New("not calculate order")
+		return errors.New("not calculate order"), nil
 	}
 
 	account, ok := s.Accounts[name]
 	if !ok {
-		return 0, errors.New("not name register")
+		return errors.New("not name register"), nil
 	}
 
 	if account.Balance < price {
-		return 0, errors.New("insufficient funds")
+		return errors.New("insufficient funds"), nil
 	}
 	account.Balance -= price
-	return 0, nil
+	return nil, nil
 }

@@ -1,12 +1,34 @@
 package shop
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
+
+var ProductTypeStruct = map[ProductType]struct{}{
+	ProductNormal:  {},
+	ProductPremium: {},
+	ProductSample:  {},
+}
+
+type ProductsMutex struct {
+	Product map[string]Product
+	sync.RWMutex
+}
+
+func NewProduct(name string, price float32, productType ProductType) Product {
+	return Product{
+		Name:  name,
+		Price: price,
+		Type:  productType,
+	}
+}
 
 func (s S) AddProduct(product Product) error {
-	if product.Name == "" {
-		return errors.New("product without name")
+	err := CheckProduct(product)
+	if err != nil {
+		return err
 	}
-
 	s.productMutex.Lock()
 	defer s.productMutex.Unlock()
 	s.Products[product.Name] = &product
@@ -18,7 +40,10 @@ func (s S) ModifyProduct(product Product) error {
 	if _, ok := s.Products[product.Name]; !ok {
 		return errors.New("product not found")
 	}
-
+	err := CheckProduct(product)
+	if err != nil {
+		return err
+	}
 	s.productMutex.Lock()
 	defer s.productMutex.Unlock()
 

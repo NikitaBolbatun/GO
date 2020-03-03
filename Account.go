@@ -2,56 +2,102 @@ package shop
 
 import (
 	"errors"
-	"sort"
+	"sync"
 )
 
-func NewAccount(Name string) Account {
+var AccountTypeStruct = map[AccountType]struct{}{
+	AccountNormal:  {},
+	AccountPremium: {},
+}
+
+func NewAccount(name string) Account {
 	return Account{
-		Name:    Name,
+		Name:    name,
 		Balance: 0,
 		Type:    AccountNormal,
 	}
 }
 
-func (s S) Register(Name string) (int, error) {
-
-	if _, ok := s.Accounts[Name]; ok {
-		return 0, errors.New("username exists")
-	}
-	if len(Name) < 1 {
-		return 0, errors.New("username not correct")
-	}
-	s.accountMutex.RLock()
-	account := NewAccount(Name)
-	s.accountMutex.RUnlock()
-	s.Accounts[Name] = &account
-	return 0, nil
+type AccountMutex struct {
+	Account map[string]Account
+	sync.RWMutex
 }
 
-func (s S) ModifyAccountType(Name string, accountType AccountType) error {
+func (accountMutex *AccountMutex) getAccount(name string) (Account, error) {
+	account, err := accountMutex.Account[name]
+	if !err {
+		return Account{}, errors.New("username exists")
+	}
+	return account, nil
+}
 
-	if _, ok := s.Accounts[Name]; !ok {
+func (accountMutex *AccountMutex) setAccount(name string) error {
+	if err := CheckNameAccount(name); err != nil {
+		return err
+	}
+	var accounts = NewAccount(name)
+	accountMutex.Account[name] = accounts
+	return nil
+}
+func (accountMutex *AccountMutex) Register(name string) error {
+	AccountMutex.Lock()
+	defer AccountMutex.Unlock()
+	err := CheckNameAccount(name)
+	if err != nil {
+		return err
+	}
+	err = accountMutex.setAccount(name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//Доделать и тесты
+func (s S) ModifyAccountType(name string, accountType AccountType) error {
+
+	if _, ok := s.Accounts[name]; !ok {
 		return errors.New("no register")
+	}
+	if _, ok := AccountTypeStruct[accountType]; !ok {
+		return errors.New("no type account")
 	}
 
 	s.accountMutex.Lock()
 	defer s.accountMutex.Unlock()
 
-	account := s.Accounts[Name]
+	account := s.Accounts[name]
 	account.Type = accountType
 	return nil
 }
 
-func (s S) Balance(Name string) (float32, error) {
+func (s S) AddBalance(name string, cash float32) error {
 
-	if _, ok := s.Accounts[Name]; !ok {
+	if cash < 0 {
+		return errors.New("negative cash")
+	}
+
+	if _, ok := s.Accounts[name]; !ok {
+		return errors.New("username not exists")
+	}
+
+	account := s.Accounts[name]
+	account.Balance += cash
+
+	s.Accounts[name] = account
+	return nil
+}
+
+func (s S) Balance(name string) (float32, error) {
+
+	if _, ok := s.Accounts[name]; !ok {
 		return 0, errors.New("no register")
 	}
 
 	s.accountMutex.Lock()
 	defer s.accountMutex.Unlock()
 
-	return s.Accounts[Name].Balance, nil
+	return s.Accounts[name].Balance, nil
 }
 
 func (s S) GetAccount(name string) (Account, error) {
@@ -67,7 +113,7 @@ func (s S) GetAccount(name string) (Account, error) {
 	return *account, nil
 }
 
-//noinspection GoTypesCompatibility
+/*
 func (s S) GetAccounts(sor AccountSortType) Account {
 	accounts := make([]Account, len(s.Accounts))
 
@@ -88,3 +134,5 @@ func (s S) GetAccounts(sor AccountSortType) Account {
 	return accounts
 
 }
+
+*/

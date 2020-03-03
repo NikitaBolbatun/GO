@@ -2,23 +2,40 @@ package shop
 
 import "errors"
 
-func NewBundle(main Product, discount float32, additional ...Product) Bundle {
+var bundleTypeStruct = map[BundleType]struct{}{
+	BundleNormal: {},
+	BundleSample: {},
+}
+
+func NewBundle(main Product, bundleType BundleType, discount float32, additional ...Product) Bundle {
 	return Bundle{
 		Products: append(additional, main),
-		Type:     BundleNormal,
+		Type:     bundleType,
 		Discount: discount,
 	}
 }
 
-func (s S) AddBundle(name string, product Product, discount float32, additional ...Product) error {
+//редачить
+func (s S) AddBundle(name string, product Product, bundleType BundleType, discount float32, additional ...Product) error {
 
+	if _, ok := s.Bundles[name]; ok {
+		return errors.New("bundle exists")
+	}
+
+	if _, ok := bundleTypeStruct[bundleType]; !ok {
+		return errors.New("no type bundle")
+	}
 	if discount < 1 || discount > 99 {
-		return errors.New("bundle not found")
+		return errors.New("negative discont")
 	}
 	s.bundleMutex.Lock()
 	defer s.bundleMutex.Unlock()
 
-	b := NewBundle(product, discount, additional...)
+	if product.Type == ProductSample {
+		return errors.New("additional product ")
+	}
+
+	b := NewBundle(product, bundleType, discount, additional...)
 	s.Bundles[name] = &b
 	return nil
 }
