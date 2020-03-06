@@ -1,10 +1,18 @@
 package shop
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 var bundleTypeStruct = map[BundleType]struct{}{
 	BundleNormal: {},
 	BundleSample: {},
+}
+
+type BundleMutex struct {
+	Bundle map[string]Bundle
+	sync.RWMutex
 }
 
 func NewBundle(main Product, bundleType BundleType, discount float32, additional ...Product) Bundle {
@@ -16,9 +24,9 @@ func NewBundle(main Product, bundleType BundleType, discount float32, additional
 }
 
 //редачить
-func (s S) AddBundle(name string, product Product, bundleType BundleType, discount float32, additional ...Product) error {
+func (bundleMutex BundleMutex) AddBundle(name string, product Product, bundleType BundleType, discount float32, additional ...Product) error {
 
-	if _, ok := s.Bundles[name]; ok {
+	if _, ok := bundleMutex.Bundle[name]; ok {
 		return errors.New("bundle exists")
 	}
 
@@ -28,44 +36,43 @@ func (s S) AddBundle(name string, product Product, bundleType BundleType, discou
 	if discount < 1 || discount > 99 {
 		return errors.New("negative discont")
 	}
-	s.bundleMutex.Lock()
-	defer s.bundleMutex.Unlock()
+	bundleMutex.Lock()
+	defer bundleMutex.Unlock()
 
 	if product.Type == ProductSample {
 		return errors.New("additional product ")
 	}
 
 	b := NewBundle(product, bundleType, discount, additional...)
-	s.Bundles[name] = &b
+	bundleMutex.Bundle[name] = b
 	return nil
 }
 
-func (s S) ChangeDiscount(name string, discount float32) error {
+func (bundleMutex BundleMutex) ChangeDiscount(name string, discount float32) error {
 
 	if discount < 1 || discount > 99 {
 		return errors.New("not discount")
 	}
 
-	s.bundleMutex.Lock()
-	defer s.bundleMutex.Unlock()
+	bundleMutex.Lock()
+	defer bundleMutex.Unlock()
 
-	if _, ok := s.Bundles[name]; !ok {
+	if _, ok := bundleMutex.Bundle[name]; !ok {
 		return errors.New("not bundle")
 	}
-
-	s.Bundles[name].Discount = discount
+	//bundleMutex.Bundle[name].Discount = discount
 	return nil
 }
 
-func (s S) RemoveBundle(name string) error {
+func (bundleMutex BundleMutex) RemoveBundle(name string) error {
 
-	s.bundleMutex.Lock()
-	defer s.bundleMutex.Unlock()
+	bundleMutex.Lock()
+	defer bundleMutex.Unlock()
 
-	if _, ok := s.Bundles[name]; !ok {
+	if _, ok := bundleMutex.Bundle[name]; !ok {
 		return errors.New("not bundle")
 	}
 
-	delete(s.Bundles, name)
+	delete(bundleMutex.Bundle, name)
 	return nil
 }

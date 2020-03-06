@@ -7,10 +7,9 @@ import (
 
 func NewShop() *S {
 	return &S{
-		// несоответсвтие с определеннымм типами в структуре S
-		Products: make(map[string]*Product),
-		Bundles:  make(map[string]*Bundle),
-		Accounts: make(map[string]*Account),
+		ProductMutex: ProductMutex{Product: make(map[string]Product)},
+		AccountMutex: AccountMutex{Account: make(map[string]Account)},
+		BundleMutex:  BundleMutex{Bundle: make(map[string]Bundle)},
 	}
 }
 func CheckNameAccount(name string) error {
@@ -21,6 +20,7 @@ func CheckNameAccount(name string) error {
 	if name == " " {
 		return errors.New("username not correct")
 	}
+
 	return nil
 }
 

@@ -11,7 +11,7 @@ var ProductTypeStruct = map[ProductType]struct{}{
 	ProductSample:  {},
 }
 
-type ProductsMutex struct {
+type ProductMutex struct {
 	Product map[string]Product
 	sync.RWMutex
 }
@@ -24,43 +24,43 @@ func NewProduct(name string, price float32, productType ProductType) Product {
 	}
 }
 
-func (s S) AddProduct(product Product) error {
+func (productMutex ProductMutex) AddProduct(product Product) error {
 	err := CheckProduct(product)
 	if err != nil {
 		return err
 	}
-	s.productMutex.Lock()
-	defer s.productMutex.Unlock()
-	s.Products[product.Name] = &product
+	productMutex.Lock()
+	defer productMutex.Unlock()
+	productMutex.Product[product.Name] = product
 
 	return nil
 }
 
-func (s S) ModifyProduct(product Product) error {
-	if _, ok := s.Products[product.Name]; !ok {
+func (productMutex ProductMutex) ModifyProduct(product Product) error {
+	if _, ok := productMutex.Product[product.Name]; !ok {
 		return errors.New("product not found")
 	}
 	err := CheckProduct(product)
 	if err != nil {
 		return err
 	}
-	s.productMutex.Lock()
-	defer s.productMutex.Unlock()
+	productMutex.Lock()
+	defer productMutex.Unlock()
 
-	s.Products[product.Name] = &product
+	productMutex.Product[product.Name] = product
 
 	return nil
 }
 
-func (s S) RemoveProduct(name string) error {
+func (productMutex ProductMutex) RemoveProduct(name string) error {
 
-	s.productMutex.Lock()
-	defer s.productMutex.Unlock()
+	productMutex.Lock()
+	defer productMutex.Unlock()
 
-	if _, ok := s.Products[name]; !ok {
+	if _, ok := productMutex.Product[name]; !ok {
 		return errors.New("cannot delete nil product")
 	}
 
-	delete(s.Products, name)
+	delete(productMutex.Product, name)
 	return nil
 }

@@ -2,6 +2,7 @@ package shop
 
 import (
 	"errors"
+	"sort"
 	"sync"
 )
 
@@ -40,8 +41,6 @@ func (accountMutex *AccountMutex) setAccount(name string) error {
 	return nil
 }
 func (accountMutex *AccountMutex) Register(name string) error {
-	AccountMutex.Lock()
-	defer AccountMutex.Unlock()
 	err := CheckNameAccount(name)
 	if err != nil {
 		return err
@@ -54,74 +53,69 @@ func (accountMutex *AccountMutex) Register(name string) error {
 }
 
 //Доделать и тесты
-func (s S) ModifyAccountType(name string, accountType AccountType) error {
-
-	if _, ok := s.Accounts[name]; !ok {
+func (accountMutex *AccountMutex) ModifyAccountType(name string, accountType AccountType) error {
+	accountMutex.Lock()
+	defer accountMutex.Unlock()
+	if _, ok := accountMutex.Account[name]; !ok {
 		return errors.New("no register")
 	}
 	if _, ok := AccountTypeStruct[accountType]; !ok {
 		return errors.New("no type account")
 	}
 
-	s.accountMutex.Lock()
-	defer s.accountMutex.Unlock()
-
-	account := s.Accounts[name]
+	account := accountMutex.Account[name]
 	account.Type = accountType
 	return nil
 }
 
-func (s S) AddBalance(name string, cash float32) error {
+func (accountMutex *AccountMutex) AddBalance(name string, cash float32) error {
 
 	if cash < 0 {
 		return errors.New("negative cash")
 	}
 
-	if _, ok := s.Accounts[name]; !ok {
+	if _, ok := accountMutex.Account[name]; !ok {
 		return errors.New("username not exists")
 	}
 
-	account := s.Accounts[name]
+	account := accountMutex.Account[name]
 	account.Balance += cash
 
-	s.Accounts[name] = account
+	accountMutex.Account[name] = account
 	return nil
 }
 
-func (s S) Balance(name string) (float32, error) {
-
-	if _, ok := s.Accounts[name]; !ok {
+func (accountMutex *AccountMutex) Balance(name string) (float32, error) {
+	accountMutex.Lock()
+	defer accountMutex.Unlock()
+	if _, ok := accountMutex.Account[name]; !ok {
 		return 0, errors.New("no register")
 	}
 
-	s.accountMutex.Lock()
-	defer s.accountMutex.Unlock()
-
-	return s.Accounts[name].Balance, nil
+	return accountMutex.Account[name].Balance, nil
 }
 
-func (s S) GetAccount(name string) (Account, error) {
-	account, ok := s.Accounts[name]
+func (accountMutex *AccountMutex) GetAccount(name string) (Account, error) {
+	account, ok := accountMutex.Account[name]
 
-	s.accountMutex.Lock()
-	defer s.accountMutex.Unlock()
+	accountMutex.Lock()
+	defer accountMutex.Unlock()
 
 	if !ok {
 		return Account{}, errors.New("no register")
 	}
 
-	return *account, nil
+	return account, nil
 }
 
-/*
-func (s S) GetAccounts(sor AccountSortType) Account {
-	accounts := make([]Account, len(s.Accounts))
+func (accountMutex *AccountMutex) GetAccounts(sor AccountSortType) []Account {
+	accounts := make([]Account, len(accountMutex.Account))
 
-	s.accountMutex.RLock()
-	for _, account := range s.Accounts {
+	accountMutex.RLock()
+	for _, account := range accountMutex.Account {
 		accounts = append(accounts, account)
 	}
-	s.accountMutex.RUnlock()
+	accountMutex.RUnlock()
 	switch sor {
 	case SortByName:
 		sort.Slice(accounts, func(i, j int) bool { return accounts[i].Name < accounts[j].Name })
@@ -134,5 +128,3 @@ func (s S) GetAccounts(sor AccountSortType) Account {
 	return accounts
 
 }
-
-*/

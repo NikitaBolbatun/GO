@@ -10,14 +10,18 @@ var DiscountType = map[ProductType]map[AccountType]float32{
 }
 
 func (s S) CalculateOrder(name string, order Order) (float32, error) {
-
-	s.accountMutex.RLock()
-	account, err := s.GetAccount(name)
-	s.accountMutex.RUnlock()
-	if err != nil {
-		return 0, errors.New("not name register")
+	if order.Products == nil &&
+		order.Bundles == nil {
+		return 0, errors.New("order items not init")
 	}
-
+	if len(order.Products) == 0 &&
+		len(order.Bundles) == 0 {
+		return 0, errors.New("not purchases")
+	}
+	account, ok := s.AccountMutex.Account[name]
+	if !ok {
+		return 0, errors.New("user is not registered")
+	}
 	// discount
 	allDiscount := float32(0)
 	for _, product := range order.Products {
@@ -46,14 +50,12 @@ func (s S) CalculateOrder(name string, order Order) (float32, error) {
 }
 
 func (s S) PlaceOrder(name string, order Order) (error, error) {
-	s.orderMutex.Lock()
 	price, err := s.CalculateOrder(name, order)
-	s.orderMutex.Unlock()
 	if err != nil {
 		return errors.New("not calculate order"), nil
 	}
 
-	account, ok := s.Accounts[name]
+	account, ok := s.AccountMutex.Account[name]
 	if !ok {
 		return errors.New("not name register"), nil
 	}

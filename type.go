@@ -46,7 +46,7 @@ type Account struct {
 }
 
 type S struct {
-	Accounts map[string]*Account
-	Products map[string]*Product
-	Bundles  map[string]*Bundle
+	AccountMutex
+	ProductMutex
+	BundleMutex
 }
