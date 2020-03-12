@@ -16,7 +16,6 @@ const (
 	SortByBalance
 )
 
-//ProductType one of ProductNormal/ProductPremium/ProductSample
 type ProductType uint8
 type BundleType uint8
 type AccountType uint8

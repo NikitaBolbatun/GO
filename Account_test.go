@@ -20,7 +20,6 @@ func Test_RegisterTwoRegsName(t *testing.T) {
 	name := "Nikita"
 	nameTwo := "Nikita"
 
-	shop.Register(name)
 	if ok := shop.Register(name); ok != nil {
 		t.Fatal("Register error")
 	}
@@ -39,17 +38,16 @@ func Test_RegisterNameEmpty(t *testing.T) {
 	}
 }
 
-/*
 func Test_RegisterNameSpace(t *testing.T) {
 	shop := NewShop()
 	nameRight := " "
 	shop.Register(nameRight)
 
-	if err := shop.AccountMutex.Account[nameRight]; err != nil {
+	if _, err := shop.getAccount(nameRight); err == nil {
 		t.Fatalf("Register error = %v", err)
 	}
 }
-*/
+
 func Test_AddBalance(t *testing.T) {
 	shop := NewShop()
 	shop.Register("Nikita")
@@ -81,7 +79,6 @@ func Test_ModifyAccountType(t *testing.T) {
 
 	shop.Account["Petr"] = account
 
-	// не предусмотрен такой тип аккаунта
 	err := shop.ModifyAccountType("Petr", 101)
 	if err == nil {
 		t.Fatalf("Type account = %v", err)
@@ -89,3 +86,16 @@ func Test_ModifyAccountType(t *testing.T) {
 }
 
 //-----GetAccounts-----
+
+func TestSort(t *testing.T) {
+	shop := NewShop()
+	shop.Register("Nikita")
+	shop.Register("Alexa")
+	shop.AddBalance("Nikita", 100000)
+	shop.AddBalance("Alexa", 5)
+
+	accs := shop.GetAccounts(SortByBalance)
+	for _, v := range accs {
+		t.Log(v)
+	}
+}

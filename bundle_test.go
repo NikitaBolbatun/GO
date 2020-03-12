@@ -80,3 +80,25 @@ func Test_AddBundleSampleWithNotNullPrice(t *testing.T) {
 	err := shop.AddBundle("New", product, 25, 30, productAdditional)
 	require.NotZero(t, err)
 }
+
+func Test_ChangeDiscont(t *testing.T) {
+	shop := NewShop()
+	product := Product{
+		Name:  "Orange",
+		Price: 10,
+		Type:  ProductNormal,
+	}
+
+	productAdditional := Product{
+		Name:  "Coffee",
+		Price: 0,
+		Type:  ProductSample,
+	}
+	discontOld := 10
+
+	err := shop.AddBundle("New", product, BundleNormal, float32(discontOld), productAdditional)
+	if err != nil {
+		t.Fatalf("Not add bundle = %v", err)
+	}
+	shop.ChangeDiscount("New", 10)
+}

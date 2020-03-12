@@ -15,6 +15,24 @@ type BundleMutex struct {
 	sync.RWMutex
 }
 
+func (bundleMutex BundleMutex) getBundle(name string) (Bundle, error) {
+	bundleMutex.RLock()
+	defer bundleMutex.RUnlock()
+
+	if bundle, ok := bundleMutex.Bundle[name]; ok {
+		return bundle, nil
+	} else {
+		return Bundle{}, errors.New("bundle no exist")
+	}
+}
+
+func (bundleMutex BundleMutex) setBundle(name string, bundle Bundle) {
+	bundleMutex.Lock()
+
+	bundleMutex.Bundle[name] = bundle
+
+	bundleMutex.Unlock()
+}
 func NewBundle(main Product, bundleType BundleType, discount float32, additional ...Product) Bundle {
 	return Bundle{
 		Products: append(additional, main),
@@ -23,10 +41,9 @@ func NewBundle(main Product, bundleType BundleType, discount float32, additional
 	}
 }
 
-//редачить
 func (bundleMutex BundleMutex) AddBundle(name string, product Product, bundleType BundleType, discount float32, additional ...Product) error {
 
-	if _, ok := bundleMutex.Bundle[name]; ok {
+	if _, ok := bundleMutex.getBundle(name); ok == nil {
 		return errors.New("bundle exists")
 	}
 
@@ -36,15 +53,10 @@ func (bundleMutex BundleMutex) AddBundle(name string, product Product, bundleTyp
 	if discount < 1 || discount > 99 {
 		return errors.New("negative discont")
 	}
-	bundleMutex.Lock()
-	defer bundleMutex.Unlock()
-
 	if product.Type == ProductSample {
 		return errors.New("additional product ")
 	}
-
-	b := NewBundle(product, bundleType, discount, additional...)
-	bundleMutex.Bundle[name] = b
+	bundleMutex.setBundle(name, NewBundle(product, bundleType, discount, additional...))
 	return nil
 }
 
@@ -53,26 +65,26 @@ func (bundleMutex BundleMutex) ChangeDiscount(name string, discount float32) err
 	if discount < 1 || discount > 99 {
 		return errors.New("not discount")
 	}
-
-	bundleMutex.Lock()
-	defer bundleMutex.Unlock()
-
-	if _, ok := bundleMutex.Bundle[name]; !ok {
-		return errors.New("not bundle")
+	bundle, err := bundleMutex.getBundle(name)
+	if err != nil {
+		return err
 	}
-	//bundleMutex.Bundle[name].Discount = discount
+	bundle.Discount = discount
+
+	bundleMutex.setBundle(name, bundle)
 	return nil
 }
 
 func (bundleMutex BundleMutex) RemoveBundle(name string) error {
 
-	bundleMutex.Lock()
-	defer bundleMutex.Unlock()
-
-	if _, ok := bundleMutex.Bundle[name]; !ok {
-		return errors.New("not bundle")
+	if _, err := bundleMutex.getBundle(name); err != nil {
+		return err
 	}
 
+	bundleMutex.Lock()
+
 	delete(bundleMutex.Bundle, name)
+
+	bundleMutex.Unlock()
 	return nil
 }

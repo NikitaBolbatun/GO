@@ -11,77 +11,70 @@ var AccountTypeStruct = map[AccountType]struct{}{
 	AccountPremium: {},
 }
 
-func NewAccount(name string) Account {
-	return Account{
-		Name:    name,
-		Balance: 0,
-		Type:    AccountNormal,
-	}
-}
-
 type AccountMutex struct {
 	Account map[string]Account
 	sync.RWMutex
 }
 
-func (accountMutex *AccountMutex) getAccount(name string) (Account, error) {
+func NewAccount(Name string) Account {
+	return Account{
+		Name:    Name,
+		Balance: 0,
+		Type:    AccountNormal,
+	}
+}
+func (accountMutex AccountMutex) getAccount(name string) (Account, error) {
+	accountMutex.Lock()
+	defer accountMutex.Unlock()
 	account, err := accountMutex.Account[name]
 	if !err {
-		return Account{}, errors.New("username exists")
+		return Account{}, errors.New("username no exists")
 	}
 	return account, nil
 }
 
-func (accountMutex *AccountMutex) setAccount(name string) error {
-	if err := CheckNameAccount(name); err != nil {
-		return err
-	}
-	var accounts = NewAccount(name)
-	accountMutex.Account[name] = accounts
-	return nil
+func (accountMutex *AccountMutex) setAccount(account Account) {
+	accountMutex.Lock()
+
+	accountMutex.Account[account.Name] = account
+
+	accountMutex.Unlock()
 }
+
 func (accountMutex *AccountMutex) Register(name string) error {
 	err := CheckNameAccount(name)
 	if err != nil {
 		return err
 	}
-	err = accountMutex.setAccount(name)
-	if err != nil {
-		return err
+	if _, err := accountMutex.getAccount(name); err == nil {
+		return errors.New("users exist")
 	}
+	accountMutex.setAccount(NewAccount(name))
 	return nil
 }
-
-//Доделать и тесты
 func (accountMutex *AccountMutex) ModifyAccountType(name string, accountType AccountType) error {
-	accountMutex.Lock()
-	defer accountMutex.Unlock()
-	if _, ok := accountMutex.Account[name]; !ok {
-		return errors.New("no register")
+	account, err := accountMutex.getAccount(name)
+	if err != nil {
+		return err
 	}
 	if _, ok := AccountTypeStruct[accountType]; !ok {
 		return errors.New("no type account")
 	}
-
-	account := accountMutex.Account[name]
 	account.Type = accountType
+	accountMutex.setAccount(account)
 	return nil
 }
 
 func (accountMutex *AccountMutex) AddBalance(name string, cash float32) error {
-
+	account, err := accountMutex.getAccount(name)
+	if err != nil {
+		return err
+	}
 	if cash < 0 {
 		return errors.New("negative cash")
 	}
-
-	if _, ok := accountMutex.Account[name]; !ok {
-		return errors.New("username not exists")
-	}
-
-	account := accountMutex.Account[name]
 	account.Balance += cash
-
-	accountMutex.Account[name] = account
+	accountMutex.setAccount(account)
 	return nil
 }
 
@@ -94,20 +87,6 @@ func (accountMutex *AccountMutex) Balance(name string) (float32, error) {
 
 	return accountMutex.Account[name].Balance, nil
 }
-
-func (accountMutex *AccountMutex) GetAccount(name string) (Account, error) {
-	account, ok := accountMutex.Account[name]
-
-	accountMutex.Lock()
-	defer accountMutex.Unlock()
-
-	if !ok {
-		return Account{}, errors.New("no register")
-	}
-
-	return account, nil
-}
-
 func (accountMutex *AccountMutex) GetAccounts(sor AccountSortType) []Account {
 	accounts := make([]Account, len(accountMutex.Account))
 
