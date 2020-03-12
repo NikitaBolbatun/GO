@@ -1,46 +1,90 @@
 package shop
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
-func NewBundle(main Product, discount float32, additional ...Product) Bundle {
+var bundleTypeStruct = map[BundleType]struct{}{
+	BundleNormal: {},
+	BundleSample: {},
+}
+
+type BundleMutex struct {
+	Bundle map[string]Bundle
+	sync.RWMutex
+}
+
+func (bundleMutex BundleMutex) getBundle(name string) (Bundle, error) {
+	bundleMutex.RLock()
+	defer bundleMutex.RUnlock()
+
+	if bundle, ok := bundleMutex.Bundle[name]; ok {
+		return bundle, nil
+	} else {
+		return Bundle{}, errors.New("bundle no exist")
+	}
+}
+
+func (bundleMutex BundleMutex) setBundle(name string, bundle Bundle) {
+	bundleMutex.Lock()
+
+	bundleMutex.Bundle[name] = bundle
+
+	bundleMutex.Unlock()
+}
+func NewBundle(main Product, bundleType BundleType, discount float32, additional ...Product) Bundle {
 	return Bundle{
 		Products: append(additional, main),
-		Type:     BundleNormal,
+		Type:     bundleType,
 		Discount: discount,
 	}
 }
 
-func (s S) AddBundle(name string, product Product, discount float32, additional ...Product) error {
+func (bundleMutex BundleMutex) AddBundle(name string, product Product, bundleType BundleType, discount float32, additional ...Product) error {
 
-	if discount < 1 || discount > 99 {
-		return errors.New("bundle not found")
+	if _, ok := bundleMutex.getBundle(name); ok == nil {
+		return errors.New("bundle exists")
 	}
 
-	b := NewBundle(product, discount, additional...)
-	s.Bundles[name] = &b
+	if _, ok := bundleTypeStruct[bundleType]; !ok {
+		return errors.New("no type bundle")
+	}
+	if discount < 1 || discount > 99 {
+		return errors.New("negative discont")
+	}
+	if product.Type == ProductSample {
+		return errors.New("additional product ")
+	}
+	bundleMutex.setBundle(name, NewBundle(product, bundleType, discount, additional...))
 	return nil
 }
 
-func (s S) ChangeDiscount(name string, discount float32) error {
+func (bundleMutex BundleMutex) ChangeDiscount(name string, discount float32) error {
 
 	if discount < 1 || discount > 99 {
 		return errors.New("not discount")
 	}
-
-	if _, ok := s.Bundles[name]; !ok {
-		return errors.New("not bundle")
+	bundle, err := bundleMutex.getBundle(name)
+	if err != nil {
+		return err
 	}
+	bundle.Discount = discount
 
-	s.Bundles[name].Discount = discount
+	bundleMutex.setBundle(name, bundle)
 	return nil
 }
 
-func (s S) RemoveBundle(name string) error {
+func (bundleMutex BundleMutex) RemoveBundle(name string) error {
 
-	if _, ok := s.Bundles[name]; !ok {
-		return errors.New("not bundle")
+	if _, err := bundleMutex.getBundle(name); err != nil {
+		return err
 	}
 
-	delete(s.Bundles, name)
+	bundleMutex.Lock()
+
+	delete(bundleMutex.Bundle, name)
+
+	bundleMutex.Unlock()
 	return nil
 }

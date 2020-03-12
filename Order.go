@@ -2,25 +2,47 @@ package shop
 
 import (
 	"errors"
+	"sync"
+	"time"
 )
+
+type SMutex struct {
+	sync.RWMutex
+	ProductMutex
+	AccountMutex
+	OrdersMutex
+	BundleMutex
+}
+
+type OrdersMutex struct {
+	sync.RWMutex
+	orders map[string]float32
+	time.Duration
+}
 
 var DiscountType = map[ProductType]map[AccountType]float32{
 	ProductPremium: {AccountPremium: 20, AccountNormal: 5},
 	ProductNormal:  {AccountPremium: -50, AccountNormal: 0},
 }
 
-func (s S) CalculateOrder(name string, order Order) (float32, error) {
-
-	account, err := s.GetAccount(name)
-	if err != nil {
-		return 0, errors.New("not name register")
+func (sMutex SMutex) CalculateOrder(name string, order Order) (float32, error) {
+	if order.Products == nil &&
+		order.Bundles == nil {
+		return 0, errors.New("order items not init")
 	}
-
-	// products
-	ProductsMoney := float32(0)
+	if len(order.Products) == 0 &&
+		len(order.Bundles) == 0 {
+		return 0, errors.New("not purchases")
+	}
+	account, ok := sMutex.AccountMutex.getAccount(name)
+	if ok != nil {
+		return 0, ok
+	}
+	// discount
+	allDiscount := float32(0)
 	for _, product := range order.Products {
 		var discount = DiscountType[product.Type][account.Type]
-		ProductsMoney += product.Price * (1 - discount*0.01)
+		allDiscount += product.Price * (1 - discount*0.01)
 	}
 
 	// bundles
@@ -38,26 +60,26 @@ func (s S) CalculateOrder(name string, order Order) (float32, error) {
 		bundlesPrice += price * (1 - bundle.Discount*0.01)
 	}
 
-	allPrice := ProductsMoney + bundlesPrice
+	allPrice := allDiscount + bundlesPrice
 
 	return allPrice, nil
 }
 
-func (s S) PlaceOrder(name string, order Order) (int, error) {
-
-	price, err := s.CalculateOrder(name, order)
+func (sMutex SMutex) PlaceOrder(name string, order Order) error {
+	price, err := sMutex.CalculateOrder(name, order)
 	if err != nil {
-		return 0, errors.New("not calculate order")
+		return errors.New("not calculate order")
 	}
 
-	account, ok := s.Accounts[name]
+	account, ok := sMutex.AccountMutex.Account[name]
 	if !ok {
-		return 0, errors.New("not name register")
+		return errors.New("not name register")
 	}
 
 	if account.Balance < price {
-		return 0, errors.New("insufficient funds")
+		return errors.New("insufficient funds")
 	}
 	account.Balance -= price
-	return 0, nil
+
+	return nil
 }

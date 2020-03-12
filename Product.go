@@ -1,32 +1,78 @@
 package shop
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
-func (s S) AddProduct(product Product) error {
-	if product.Name == "" {
-		return errors.New("product without name")
+var ProductTypeStruct = map[ProductType]struct{}{
+	ProductNormal:  {},
+	ProductPremium: {},
+	ProductSample:  {},
+}
+
+type ProductMutex struct {
+	Product map[string]Product
+	sync.RWMutex
+}
+
+func NewProduct(name string, price float32, productType ProductType) Product {
+	return Product{
+		Name:  name,
+		Price: price,
+		Type:  productType,
+	}
+}
+func (productMutex ProductMutex) getProduct(name string) (Product, error) {
+	productMutex.RLock()
+	defer productMutex.RUnlock()
+
+	if product, ok := productMutex.Product[name]; ok {
+		return product, nil
+	} else {
+		return product, errors.New("Product not exist")
+	}
+}
+
+func (productMutex ProductMutex) setProduct(product Product) {
+	productMutex.Lock()
+
+	productMutex.Product[product.Name] = product
+
+	productMutex.Unlock()
+}
+
+func (productMutex ProductMutex) AddProduct(product Product) error {
+	err := CheckProduct(product)
+	if err != nil {
+		return err
+	}
+	if _, err := productMutex.getProduct(product.Name); err == nil {
+		return err
 	}
 
-	s.Products[product.Name] = &product
-
+	productMutex.setProduct(product)
 	return nil
 }
 
-func (s S) ModifyProduct(product Product) error {
-	if _, ok := s.Products[product.Name]; !ok {
-		return errors.New("product not found")
+func (productMutex ProductMutex) ModifyProduct(product Product) error {
+	if _, ok := productMutex.getProduct(product.Name); ok != nil {
+		return ok
 	}
-	s.Products[product.Name] = &product
-
+	err := CheckProduct(product)
+	if err != nil {
+		return err
+	}
+	productMutex.setProduct(product)
 	return nil
 }
 
-func (s S) RemoveProduct(name string) error {
-
-	if _, ok := s.Products[name]; !ok {
-		return errors.New("cannot delete nil product")
+func (productMutex ProductMutex) RemoveProduct(name string) error {
+	if _, err := productMutex.getProduct(name); err != nil {
+		return err
 	}
-
-	delete(s.Products, name)
+	productMutex.Lock()
+	delete(productMutex.Product, name)
+	productMutex.Unlock()
 	return nil
 }
