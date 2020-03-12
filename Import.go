@@ -174,12 +174,12 @@ func (accountMutex AccountMutex) ImportAccountsCSVRecords(ctx context.Context, r
 		name := record[0]
 		balance, err := strconv.ParseFloat(record[1], 32)
 		if err != nil {
-			errChan <- ImportAccountError{Account{name, float32(balance), 0}, errors.Wrap(err, "parse float err")}
+			errChan <- ImportAccountError{Account{name, float32(balance), 0}, errors.New( "parse float err")}
 			return
 		}
 		typ, err := strconv.Atoi(record[2])
 		if err != nil {
-			errChan <- ImportAccountError{Account{name, float32(balance), AccountType(typ)}, errors.Wrap(err, "atom err")}
+			errChan <- ImportAccountError{Account{name, float32(balance), AccountType(typ)}, errors.New( "atom err")}
 			return
 		}
 		account := Account{name, float32(balance), AccountType(typ)}
