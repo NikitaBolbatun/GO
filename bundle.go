@@ -3,6 +3,7 @@ package shop
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 var bundleTypeStruct = map[BundleType]struct{}{
@@ -12,6 +13,7 @@ var bundleTypeStruct = map[BundleType]struct{}{
 
 type BundleMutex struct {
 	Bundle map[string]Bundle
+	time.Duration
 	sync.RWMutex
 }
 

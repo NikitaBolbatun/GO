@@ -3,6 +3,7 @@ package shop
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 var ProductTypeStruct = map[ProductType]struct{}{
@@ -14,6 +15,7 @@ var ProductTypeStruct = map[ProductType]struct{}{
 type ProductMutex struct {
 	Product map[string]Product
 	sync.RWMutex
+	time.Duration
 }
 
 func NewProduct(name string, price float32, productType ProductType) Product {

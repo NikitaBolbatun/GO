@@ -48,4 +48,5 @@ type S struct {
 	AccountMutex
 	ProductMutex
 	BundleMutex
+	OrdersMutex
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 	"sync"
+	"time"
 )
 
 var AccountTypeStruct = map[AccountType]struct{}{
@@ -13,6 +14,7 @@ var AccountTypeStruct = map[AccountType]struct{}{
 
 type AccountMutex struct {
 	Account map[string]Account
+	time.Duration
 	sync.RWMutex
 }
 

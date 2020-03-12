@@ -6,15 +6,8 @@ import (
 	"time"
 )
 
-type SMutex struct {
-	sync.RWMutex
-	ProductMutex
-	AccountMutex
-	OrdersMutex
-	BundleMutex
-}
-
 type OrdersMutex struct {
+	AccountMutex
 	sync.RWMutex
 	orders map[string]float32
 	time.Duration
@@ -25,7 +18,7 @@ var DiscountType = map[ProductType]map[AccountType]float32{
 	ProductNormal:  {AccountPremium: -50, AccountNormal: 0},
 }
 
-func (sMutex SMutex) CalculateOrder(name string, order Order) (float32, error) {
+func (ordersMutex OrdersMutex) CalculateOrder(name string, order Order) (float32, error) {
 	if order.Products == nil &&
 		order.Bundles == nil {
 		return 0, errors.New("order items not init")
@@ -34,7 +27,7 @@ func (sMutex SMutex) CalculateOrder(name string, order Order) (float32, error) {
 		len(order.Bundles) == 0 {
 		return 0, errors.New("not purchases")
 	}
-	account, ok := sMutex.AccountMutex.getAccount(name)
+	account, ok := ordersMutex.AccountMutex.getAccount(name)
 	if ok != nil {
 		return 0, ok
 	}
@@ -65,13 +58,13 @@ func (sMutex SMutex) CalculateOrder(name string, order Order) (float32, error) {
 	return allPrice, nil
 }
 
-func (sMutex SMutex) PlaceOrder(name string, order Order) error {
-	price, err := sMutex.CalculateOrder(name, order)
+func (ordersMutex OrdersMutex) PlaceOrder(name string, order Order) error {
+	price, err := ordersMutex.CalculateOrder(name, order)
 	if err != nil {
 		return errors.New("not calculate order")
 	}
 
-	account, ok := sMutex.AccountMutex.Account[name]
+	account, ok := ordersMutex.AccountMutex.Account[name]
 	if !ok {
 		return errors.New("not name register")
 	}
